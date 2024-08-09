@@ -1,0 +1,97 @@
+name: livealone-test
+
+on:
+  push:
+    branches: [ develop ]
+  pull_request:
+    branches:
+      - develop
+
+env:
+  DOCKER_IMAGE_TAG_NAME: livealone
+
+jobs:
+  build-and-docker-push:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up JDK 17 with OpenJDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean build
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_TAG_NAME }}:latest
+          build-args:
+            MYSQL_USER="${{secrets.MYSQL_USER}}"
+            MYSQL_PASSWORD="${{ secrets.MYSQL_PASSWORD }}"
+            JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}"
+            ACCESS_EXPIRE_TIME="${{ secrets.ACCESS_EXPIRE_TIME }}"
+            REFRESH_EXPIRE_TIME="${{ secrets.REFRESH_EXPIRE_TIME }}"
+            SOCIAL_GOOGLE_CLIENT_ID="${{ secrets.SOCIAL_GOOGLE_CLIENT_ID }}"
+            SOCIAL_GOOGLE_CLIENT_SECRET="${{ secrets.SOCIAL_GOOGLE_CLIENT_SECRET }}"
+            SOCIAL_NAVER_CLIENT_ID="${{ secrets.SOCIAL_NAVER_CLIENT_ID }}"
+            SOCIAL_NAVER_CLIENT_SECRET="${{ secrets.SOCIAL_NAVER_CLIENT_SECRET }}"
+            SOCIAL_KAKAO_CLIENT_ID="${{ secrets.SOCIAL_KAKAO_CLIENT_ID }}"
+            SOCIAL_KAKAO_CLIENT_SECRET="${{ secrets.SOCIAL_KAKAO_CLIENT_SECRET }}"
+            MONGO_INITDB_ROOT_USERNAME="${{ secrets.MONGO_INITDB_ROOT_USERNAME }}"
+            MONGO_INITDB_ROOT_PASSWORD="${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}"
+            DATABASE_HOST="${{secrets.DATABASE_HOST}}"
+            SERVER_HOST="${{secrets.SERVER_HOST}}"
+            FRONT_SERVER_HOST="${{secrets.FRONT_SERVER_HOST}}"
+            KAKAO_CID="${{secrets.KAKAO_CID}}"
+            KAKAO_SECRET_KEY="${{secrets.KAKAO_SECRET_KEY}}"
+            ADMIN_CODE="${{secrets.ADMIN_CODE}}"
+            DEFAULT_STREAM_KEY="${{secrets.DEFAULT_STREAM_KEY}}"
+            LOGGING_LEVEL="${{secrets.LOGGING_LEVEL}}"
+            ADMIN_TOKEN="${{secrets.ADMIN_TOKEN}}"
+            MAIL_USERNAME="${{secrets.MAIL_USERNAME}}"
+            MAIL_PASSWORD="${{secrets.MAIL_PASSWORD}}"
+            MAIL_TIMEOUT="${{secrets.MAIL_TIMEOUT}}"
+
+  deploy-to-ec2:
+    needs: build-and-docker-push
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            CONTAINER_ID=$(sudo docker ps -q --filter "publish=8080-8080")
+            if [ ! -z "$CONTAINER_ID" ]; then
+              sudo docker stop $CONTAINER_ID
+              sudo docker rm $CONTAINER_ID
+            fi
+
+            sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_TAG_NAME }}:latest
+            sudo docker run -d -p 8080:8080 ${{ secrets.DOCKERHUB_USERNAME }}/${{env.DOCKER_IMAGE_TAG_NAME}}:latest

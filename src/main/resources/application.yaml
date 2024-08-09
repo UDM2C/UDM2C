@@ -101,7 +101,7 @@ jwt:
 
 logging:
   level:
-    root: ${LOGGING_LEVEL}
+    root: INFO
 
 server:
   port: 8080
