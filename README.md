@@ -310,7 +310,8 @@ KAFKA_CHAT_GROUP={group}
 <summary>🧬 ERD DIAGRAM</summary>
 <div markdown="1">
  
-   ![ERD](https://www.notion.so/image/https%3A%2F%2Fprod-files-secure.s3.us-west-2.amazonaws.com%2F83c75a39-3aba-4ba4-a792-7aefe4b07895%2Ff8dacd42-637d-44d6-8051-ef9bb30e4690%2Fimage.png?table=block&id=524b6ec1-df77-471b-b3de-54670e3049da&spaceId=83c75a39-3aba-4ba4-a792-7aefe4b07895&width=2000&userId=1915f230-f6d8-4fc2-88df-57efadf78940&cache=v2)
+  <img width="1047" height="973" alt="image" src="https://github.com/user-attachments/assets/f0d744f6-2601-441a-a22f-76aa2d2e741a" />
+
 
 </div>
 </details>
